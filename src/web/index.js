@@ -28,6 +28,9 @@
     const $objectSchemaFilter = $('#objectFilters select');
     const $rowsPageSize = $('#rowsPageSize select');
     const $rowsPager = $('#rowsPager');
+    const $btnCopyValues = $('#btnCopyValues');
+    const $filtersHeader = $('#filtersHeader');
+    const $filters = $('#filters');
 
     $autofilter = $('#autofilter')
         .click(autoFilterClicked);
@@ -35,6 +38,8 @@
         .click(btnApplyFilterClicked);
     $('#btnRemoveFilter')
         .click(btnRemoveFilterClicked);
+    $btnCopyValues
+        .click(btnCopyValuesClicked);
     $txtFilter
         .keyup(txtFilterChanged)
         .click(txtFilterClicked);
@@ -58,6 +63,8 @@
         .click(clearObjectSearchClicked);
     $objectSearchInput
         .keyup(objectSearchInputChanged);
+    $filtersHeader
+        .click(filtersHeaderClicked);
 
 
     // VSCode API for interacting with the extension back-end
@@ -138,6 +145,8 @@
         sendMessage({
             'command': 'viewIsReady'
         });
+
+        document.oncontextmenu = document.body.oncontextmenu = function() { return false; }
     });
 
 
@@ -302,6 +311,10 @@
             $txtFilter.val(vm.filter);
         }
 
+        if (vm.filtersPanelOpen !== undefined) {
+            toggleFiltersPanel(vm.filtersPanelOpen);
+        }
+
         if (vm.autoApply !== undefined) {
             $autofilter.get(0).checked = vm.autoApply;
         }
@@ -450,6 +463,7 @@
                     .click(columnClicked),
             selectedIndex
         );
+        $btnCopyValues.hide();
     }
 
 
@@ -482,6 +496,7 @@
         );
         setHeaderSorting($table.find('.table-header .col1').click(valuesHeaderClicked), sortAscendingValues);
         setHeaderSorting($table.find('.table-header .col2').click(valuesCountHeaderClicked), sortAscendingValuesCount);
+        $btnCopyValues.toggle(Array.isArray(values) && values.length > 0);
     }
 
 
@@ -720,8 +735,28 @@
     }
 
 
+    function toggleFiltersPanel(open) {
+        if (arguments.length === 1) {
+            $filtersHeader.toggleClass('filter-closed', !open);
+            $filters.toggleClass('filter-closed', !open);
+        }
+        else {
+            $filtersHeader.toggleClass('filter-closed');
+            $filters.toggleClass('filter-closed');
+        }
+        updateViewModel({
+            'filtersPanelOpen': !$filtersHeader.hasClass('filter-closed')
+        });
+    }
+
+
     // Event handlers
     //*********************************************************** */
+
+    function filtersHeaderClicked() {
+        toggleFiltersPanel();
+    }
+
 
     function btnSearchObjectsClicked() {
         $objectSearch.toggleClass('opened', true);
@@ -794,9 +829,15 @@
         _selectedColumn = selectedItem.data('item');
         _selectedValue = undefined;
         showLoading();
+        // Determines if the column should be sorted ascending or descending by default
+        var sortAscendingColumnValues = true;
+        var columnType = getBaseType(_selectedColumn.Type);
+        if (columnType.startsWith('date')) {
+            sortAscendingColumnValues = false;
+        }
         updateViewModel({
             'selectedColumnIndex': selectedItem.data('item-index'),
-            'sortAscendingColumnValues': true,
+            'sortAscendingColumnValues': sortAscendingColumnValues,
             'sortAscendingColumnValuesCount': null,
         });
         sendMessage({
@@ -820,6 +861,7 @@
 
     function valueDblClicked() {
         AddFilter('AND');
+        toggleFiltersPanel(true);
     }
 
 
@@ -875,12 +917,33 @@
 
     function btnRemoveFilterClicked() {
         $txtFilter.val('');
+        toggleFiltersPanel(false);
         txtFilterChanged();
         updateViewModel({
             'filter': ''
         });
         if ($autofilter.get(0).checked) {
             applyFilter();
+        }
+    }
+
+
+    function btnCopyValuesClicked() {
+        let values = $('#values .table-data');
+        if (values.length > 0) { 
+            let text = 'Value\tCount\n';
+            for (let index = 0; index < values.length; index++) {
+                let item = values.eq(index).data('item');
+                text += `${item.Value}\t${item.Count}\n`;
+            }
+            sendMessage({
+                'command': 'copyText',
+                'item': text
+            });
+            sendMessage({
+                'command': 'showMessage',
+                'item': 'Values copied to clipboard.'
+            });
         }
     }
 
@@ -933,16 +996,17 @@
         else if (liveMonitoringIntervalHandler === undefined) {
 
             let refreshFunc = () => {
-                let tables = $('#objects .table-data');
+                let tables = $('#objects .table-data:not(.hidden)');
                 let tasks = [];
 
                 for (let index = 0; index < tables.length; index++) {
-                    let item = tables.eq(index).data('item');
+                    let table = tables.eq(index);
+                    let item = table.data('item');
                     tasks.push({
                         'item': item,
                         'message': {
                             'command': 'loadRowsCount',
-                            'index': index
+                            'index': table.data('item-index')
                         }
                     });
                 }
@@ -970,7 +1034,8 @@
                         let task = tasks[idx];
 
                         if (task.item !== undefined) {
-                            let currentTable = $('#objects .table-data').eq(idx).data('item');
+                            let tables = $('#objects .table-data:not(.hidden)');
+                            let currentTable = tables.eq(idx).data('item');
                             if (
                                 currentTable === undefined
                                 || (currentTable.Name !== task.item.Name && currentTable.Schema !== task.item.Schema)
@@ -993,7 +1058,7 @@
                 execMessagesFunc();
             };
 
-            let tables = $('#objects .table-data');
+            let tables = $('#objects .table-data:not(.hidden)');
             let intervalTableMs = pauseBetweenCommands * (tables.length + 1) + 1000;
 
             refreshFunc();
@@ -1004,7 +1069,7 @@
                     liveMonitoringIntervalHandler = undefined;
                 }
                 if (isLiveMonitoringEnabled) {
-                    let tables = $('#objects .table-data');
+                    let tables = $('#objects .table-data:not(.hidden)');
                     let intervalTableMs = pauseBetweenCommands * (tables.length + 1) + 1000;
                     let intervalMs = timerValue * 1000;
                     if (intervalMs < intervalTableMs) {
@@ -1130,6 +1195,14 @@
     // Filter clause composition
     //*********************************************************** */
 
+    function getBaseType(type) {
+        let baseType = type.split(' ')[0];
+        if (baseType.indexOf(':') > 0) {
+            baseType = baseType.substring(baseType.indexOf(':') + 1);
+        }
+        return baseType;
+    }
+
     function AddFilter(operand) {
         let filter = $txtFilter.val().trim();
         if (filter.length > 0) { filter += " " + operand + " "; }
@@ -1138,11 +1211,7 @@
             filter += "([" + _selectedColumn.Name + "] IS " + ((val === null || val === "[NULL]") ? "NULL" : "NOT NULL") + ")";
         }
         else {
-            let type = _selectedColumn.Type;
-            if (type.indexOf(':') > 0) {
-                type = type.split(':')[1];
-            }
-
+            let type = getBaseType(_selectedColumn.Type);
             switch (type) {
                 case "uniqueidentifier":
                     {

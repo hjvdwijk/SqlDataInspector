@@ -86,6 +86,7 @@ button {
     font-size: 9pt;
     cursor: pointer;
     border-radius: 0;
+    transition: background-color 0.15s;
 
     &.default {
         font-weight: bold;
@@ -228,6 +229,7 @@ label {
         display: table;
         table-layout: fixed;
         width: 100%;
+        transition: color 0.15s, background-color 0.15s;
         
         > div {
             text-overflow: ellipsis;
@@ -299,10 +301,15 @@ label {
     }
 }
 
+#workspace {
+    display: grid;
+    grid-template-rows: 40% 60%;
+    height: 100%;
+}
+
 #navigation {    
     display: grid;
-    flex-grow: 5;
-    grid-template-columns: 39% 26% 35%;
+    grid-template-columns: 37% 28% 35%;
 
     select {
         position: absolute;
@@ -318,20 +325,24 @@ label {
     }
 }
 
+#data {
+    display: flex;
+    flex-direction: column;
+}
+
 #objects {
-    flex-grow: 4;
     position: relative;
 
     .col1 {
-        width: 45%;
+        width: 50%;
     }
     
     .col2 {
-        width: 25%;
+        width: 30%;
     }
 
     .col3 {
-        width: 30%;
+        width: 20%;
     }
 
     h2 {
@@ -348,7 +359,6 @@ label {
 }
 
 #columns {
-    flex-grow: 3;
     position: relative;
 
     .col1 {
@@ -365,7 +375,6 @@ label {
 }
 
 #values {
-    flex-grow: 4;
     position: relative;
 
     .col1 {
@@ -375,20 +384,97 @@ label {
     .col2 {
         width: 20%;
     }
+
+    .count {
+        display: inline-block;
+        min-width: auto;
+        margin-right: 10px;
+    }
+
+    h2 {
+        button {
+            cursor: pointer;
+            padding: 2px 4px;
+            float: right;
+            border: none;
+            transition: color 0.15s, background-color 0.15s;
+
+            span {
+                margin-left: 6px;
+                font-size: 9pt;
+                position: relative;
+                top: -1px;
+            }
+
+            i {
+                position: relative;
+                top: 1px;
+            }
+    
+            &:hover {
+                color: var(--vscode-button-secondaryForeground);
+                background-color: var(--vscode-button-secondaryHoverBackground);
+            }
+        }
+    }
+}
+
+#btnCopyValues {
+    //display: none;
 }
 
 #filters {
-    flex-grow: 1;
     display: flex;
     flex-direction: row;
     min-height: 128px;
+
+    &.filter-closed {
+        display: none;
+    }
+}
+
+#filtersHeader {
+    cursor: pointer;
+    margin: 8px 8px 0 8px;
+    transition: color 0.15s, background-color 0.15s;
+
+    .btn-hide-filters {
+        display: inline-block;
+    }
+
+    .btn-show-filters {
+        display: none;
+    }
+
+    i {
+        margin-right: 4px;
+        padding: 3px;
+        width: 20px;
+    }
+
+    &:hover {
+        color: var(--vscode-button-secondaryForeground);
+        background-color: var(--vscode-button-secondaryHoverBackground);
+    }
+
+    &.filter-closed {
+        background-color: var(--vscode-titleBar-activeBackground);
+
+        .btn-hide-filters {
+            display: none;
+        }
+
+        .btn-show-filters {
+            display: inline-block;
+        }
+    }
 }
 
 #filtersArea {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: 0 8px 8px 8px;
 
     > div {
         height: 100%;
@@ -406,7 +492,7 @@ label {
 
     .controls {
         position: absolute;
-        top: 30px;
+        top: 3px;
         left: 8px;
         right: 8px
     }
@@ -418,7 +504,7 @@ label {
 }
 
 #dataRows {
-    flex-grow: 4;
+    flex-grow: 1;
     position: relative;
 
     h2 {
@@ -542,10 +628,20 @@ label {
             top: 0;
             right: 0;
             height: 30px;
-            background-color: rgb(201, 5, 63);
+            background-color: #c9053f;
             border-color: var(--vscode-titleBar-activeBackground);
             color: white;
             padding: 4px 8px;
+            transition: background-color 0.15s;
+
+            &:hover {
+                background-color: #e81123;
+            }
+
+            i {
+                position: relative;
+                top: 2px;
+            }
         }
     }
 
@@ -599,7 +695,7 @@ label {
 #objectSearch {
     position: absolute;
     top: 9px;
-    left: 10px;
+    left: 8px;
     height: 18px;
     background-color: var(--vscode-editor-background);
     padding-top: 1px;
@@ -611,10 +707,19 @@ label {
         width: 50%;
     }
 
-    i {
+    button {
+        border: none;
         cursor: pointer;
+        padding: 3px;
+        margin: 0;
+        transition: color 0.15s, background-color 0.15s;
         position: relative;
-        top: 1px;
+        top: -1px;
+
+        &:hover {
+            color: var(--vscode-button-secondaryForeground);
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
     }
 
     > div {
@@ -632,19 +737,28 @@ label {
         height: 18px;
         padding: 3px;
         width: 100%;
+        outline: none;
     }
 
     #clearObjectSearch {
         position: absolute;
-        right: 2px;
+        right: 1px;
         top: 3px;
         bottom: 0px;
         cursor: pointer;
         color: var(--vscode-input-foreground);
         background-color: var(--vscode-input-background);
+        transition: color 0.15s, background-color 0.15s;
+        width: 16px;
+        height: 16px;
+        overflow: hidden;
+        box-sizing: border-box;
+        padding: 2px;
 
         i {
-            top: 0px;
+            font-size: 12px;
+            position: relative;
+            top: -3px;
         }
 
         &:hover {
@@ -675,6 +789,7 @@ label {
         height: 21px;
         text-align: center;
         cursor: pointer;
+        transition: color 0.15s, background-color 0.15s;
 
         &:hover, &.clicked {
             background-color: var(--vscode-list-hoverBackground);
